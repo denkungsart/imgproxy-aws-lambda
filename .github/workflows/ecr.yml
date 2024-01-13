@@ -1,0 +1,36 @@
+name: Build & publish docker image to AWS ECR
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    # ref https://github.com/aws-actions/configure-aws-credentials?tab=readme-ov-file#oidc
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Configure AWS Credentials Action for GitHub Actions
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_IAM_ROLE }}
+        aws-region: eu-west-1
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Build, tag, and push docker image to Amazon ECR
+      uses: docker/build-push-action@v5
+      with:
+        push: true
+        platforms: linux/arm64
+        tags: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ github.event.repository.name }}:${{ github.ref_name }}
