@@ -1,8 +1,3 @@
-FROM public.ecr.aws/awsguru/aws-lambda-adapter:0.8.0 AS lwa
-FROM darthsim/imgproxy:v3.21.0-arm64
-
-COPY --from=lwa /lambda-adapter /opt/extensions/lambda-adapter
-ENV PORT=8080
-ENV AWS_LWA_READINESS_CHECK_PATH=/health
+FROM darthsim/imgproxy:latest-arm64
 
 LABEL org.opencontainers.image.source="https://github.com/imgproxy/imgproxy"
