@@ -33,4 +33,5 @@ jobs:
       with:
         push: true
         platforms: linux/arm64
+        provenance: false
         tags: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ github.event.repository.name }}:${{ github.ref_name }}
