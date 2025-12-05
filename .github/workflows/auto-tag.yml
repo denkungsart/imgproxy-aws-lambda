@@ -1,0 +1,43 @@
+name: Auto tag from Dockerfile
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version from Dockerfile
+        id: version
+        run: |
+          set -euo pipefail
+          version=$(grep -oE '^FROM darthsim/imgproxy:v[^[:space:]]+' Dockerfile | sed 's/^FROM darthsim\/imgproxy:v//')
+          if [ -z "$version" ]; then
+            echo "Version could not be determined from Dockerfile" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push tag if missing
+        env:
+          TAG: v${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          git fetch --tags
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            echo "Tag $TAG already exists, nothing to do."
+            exit 0
+          fi
+
+          git tag "$TAG"
+          git push origin "$TAG"
