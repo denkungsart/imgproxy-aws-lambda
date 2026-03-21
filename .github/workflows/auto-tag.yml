@@ -1,0 +1,79 @@
+name: Auto tag from Dockerfile
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - Dockerfile
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect updated imgproxy version
+        id: version
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          extract_version() {
+            local revision="$1"
+            local dockerfile
+
+            dockerfile="$(git show "${revision}:Dockerfile" 2>/dev/null || true)"
+            if [ -z "$dockerfile" ]; then
+              return 0
+            fi
+
+            printf '%s\n' "$dockerfile" | sed -n 's/^FROM darthsim\/imgproxy:\(v[^[:space:]]\+\)$/\1/p' | head -n 1
+          }
+
+          if [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            echo "Initial branch push detected; skipping tag creation."
+            echo "should_tag=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          previous_version="$(extract_version "$BEFORE_SHA")"
+          current_version="$(extract_version "$AFTER_SHA")"
+
+          if [ -z "$current_version" ]; then
+            echo "Version could not be determined from Dockerfile at $AFTER_SHA" >&2
+            exit 1
+          fi
+
+          if [ "$previous_version" = "$current_version" ]; then
+            echo "imgproxy version did not change ($current_version); skipping tag creation."
+            echo "should_tag=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Detected imgproxy version change: ${previous_version:-<none>} -> $current_version"
+          echo "version=$current_version" >> "$GITHUB_OUTPUT"
+          echo "should_tag=true" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push tag if missing
+        if: steps.version.outputs.should_tag == 'true'
+        env:
+          TAG: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          git fetch --tags
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            echo "Tag $TAG already exists, nothing to do."
+            exit 0
+          fi
+
+          git tag "$TAG" "$GITHUB_SHA"
+          git push origin "$TAG"
