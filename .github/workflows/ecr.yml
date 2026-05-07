@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Git tag to build and publish
+        required: true
+        type: string
 
 jobs:
   build:
@@ -14,7 +20,32 @@ jobs:
       id-token: write
       contents: read
 
+    env:
+      AWS_REGION: eu-west-1
+
     steps:
+    - name: Resolve image tag
+      id: image
+      env:
+        DISPATCH_TAG: ${{ github.event.inputs.tag }}
+      run: |
+        set -euo pipefail
+        tag="${DISPATCH_TAG:-$GITHUB_REF_NAME}"
+        case "$tag" in
+          v*) ;;
+          *)
+            echo "ECR publish expects a v* tag, got: $tag" >&2
+            exit 1
+            ;;
+        esac
+
+        echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+    - name: Checkout
+      uses: actions/checkout@v6
+      with:
+        ref: ${{ steps.image.outputs.tag }}
+
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v4
 
@@ -22,7 +53,7 @@ jobs:
       uses: aws-actions/configure-aws-credentials@v6
       with:
         role-to-assume: ${{ secrets.AWS_IAM_ROLE }}
-        aws-region: eu-west-1
+        aws-region: ${{ env.AWS_REGION }}
 
     - name: Login to Amazon ECR
       id: login-ecr
@@ -31,7 +62,8 @@ jobs:
     - name: Build, tag, and push docker image to Amazon ECR
       uses: docker/build-push-action@v7
       with:
+        context: .
         push: true
         platforms: linux/arm64
         provenance: false
-        tags: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ github.event.repository.name }}:${{ github.ref_name }}
+        tags: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ github.event.repository.name }}:${{ steps.image.outputs.tag }}
