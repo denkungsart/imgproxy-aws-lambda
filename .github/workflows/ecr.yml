@@ -15,6 +15,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    # The AWS push role only trusts this environment, which only deploys from
+    # main and v* tags. It holds the secrets AWS_IAM_ROLE and AWS_ACCOUNT_ID.
+    environment: ecr-publish
+
     # ref https://github.com/aws-actions/configure-aws-credentials?tab=readme-ov-file#oidc
     permissions:
       id-token: write
