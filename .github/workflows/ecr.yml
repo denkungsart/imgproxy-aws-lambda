@@ -15,6 +15,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    # The push role in the devops account (terraform-devops) only trusts this
+    # environment, which only deploys from main and v* tags. Its secrets
+    # AWS_IAM_ROLE and AWS_ACCOUNT_ID point at that account.
+    environment: ecr-publish
+
     # ref https://github.com/aws-actions/configure-aws-credentials?tab=readme-ov-file#oidc
     permissions:
       id-token: write

@@ -23,7 +23,12 @@ the ARM64 image to AWS ECR.
 
 ## Required GitHub secrets
 
-The ECR publish workflow expects these repository secrets:
+The ECR publish workflow runs in the `ecr-publish` environment, which only
+deploys from `main` and `v*` tags. It expects these environment secrets:
 
-- `AWS_IAM_ROLE`
-- `AWS_ACCOUNT_ID`
+- `AWS_IAM_ROLE`: the push role from `terraform output image_push_role_arns` in
+  terraform-devops
+- `AWS_ACCOUNT_ID`: the devops account, `960471713478`
+
+The registry and the push role live in terraform-devops. Organization accounts
+and their Lambda functions may pull the image; nobody else can.
