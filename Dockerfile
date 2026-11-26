@@ -1,3 +1,3 @@
-FROM darthsim/imgproxy:v4.0.24-arm64
+FROM darthsim/imgproxy:v4.0.25-arm64
 
 LABEL org.opencontainers.image.source="https://github.com/imgproxy/imgproxy"
