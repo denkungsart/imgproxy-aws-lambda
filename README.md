@@ -23,7 +23,8 @@ the ARM64 image to AWS ECR.
 
 ## Required GitHub secrets
 
-The ECR publish workflow expects these repository secrets:
+The ECR publish workflow runs in the `ecr-publish` environment, which only
+deploys from `main` and `v*` tags. It expects these environment secrets:
 
-- `AWS_IAM_ROLE`
-- `AWS_ACCOUNT_ID`
+- `AWS_IAM_ROLE`: the ARN of the role that may push the image
+- `AWS_ACCOUNT_ID`: the AWS account of the ECR registry
